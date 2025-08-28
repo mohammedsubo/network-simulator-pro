@@ -289,7 +289,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 **Mohammed Subo**
 - GitHub: [@mohammedsubo](https://github.com/mohammedsubo)
-- LinkedIn: [Mohammed Subo](linkedin.com/in/mohammed-supoh-462154381)
+- LinkedIn: [Mohammed Subo](https://www.linkedin.com/in/mohammed-supoh-462154381/)
 - Email: mohammed.sopuh7@gmail.com
 
 
@@ -301,4 +301,5 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 
 **Made with ❤️ by Mohammed Suboh
+
 
