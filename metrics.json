@@ -1,0 +1,126 @@
+{
+  "simulation_data": [
+    {
+      "time": 0,
+      "timestamp": "2025-08-28T22:45:47.619897",
+      "slices": {
+        "EMBB-001": 53,
+        "URLLC-001": 46,
+        "MMTC-001": 59
+      }
+    },
+    {
+      "time": 1,
+      "timestamp": "2025-08-28T22:45:48.621542",
+      "slices": {
+        "EMBB-001": 64,
+        "URLLC-001": 42,
+        "MMTC-001": 55
+      }
+    },
+    {
+      "time": 2,
+      "timestamp": "2025-08-28T22:45:49.623417",
+      "slices": {
+        "EMBB-001": 68,
+        "URLLC-001": 47,
+        "MMTC-001": 46
+      }
+    },
+    {
+      "time": 3,
+      "timestamp": "2025-08-28T22:45:50.624841",
+      "slices": {
+        "EMBB-001": 65,
+        "URLLC-001": 39,
+        "MMTC-001": 45
+      }
+    },
+    {
+      "time": 4,
+      "timestamp": "2025-08-28T22:45:51.633179",
+      "slices": {
+        "EMBB-001": 78,
+        "URLLC-001": 44,
+        "MMTC-001": 38
+      }
+    },
+    {
+      "time": 5,
+      "timestamp": "2025-08-28T22:45:52.643095",
+      "slices": {
+        "EMBB-001": 73,
+        "URLLC-001": 58,
+        "MMTC-001": 44
+      }
+    },
+    {
+      "time": 6,
+      "timestamp": "2025-08-28T22:45:53.644054",
+      "slices": {
+        "EMBB-001": 82,
+        "URLLC-001": 68,
+        "MMTC-001": 39
+      }
+    },
+    {
+      "time": 7,
+      "timestamp": "2025-08-28T22:45:54.645776",
+      "slices": {
+        "EMBB-001": 77,
+        "URLLC-001": 83,
+        "MMTC-001": 51
+      }
+    },
+    {
+      "time": 8,
+      "timestamp": "2025-08-28T22:45:55.646426",
+      "slices": {
+        "EMBB-001": 80,
+        "URLLC-001": 79,
+        "MMTC-001": 49
+      }
+    },
+    {
+      "time": 9,
+      "timestamp": "2025-08-28T22:45:56.656691",
+      "slices": {
+        "EMBB-001": 79,
+        "URLLC-001": 81,
+        "MMTC-001": 60
+      }
+    }
+  ],
+  "final_state": {
+    "timestamp": "2025-08-28T22:45:57.633838",
+    "simulation_time": 10,
+    "total_devices": 5,
+    "network_slices": [
+      {
+        "slice_id": "EMBB-001",
+        "type": "Enhanced Mobile Broadband",
+        "load": 79,
+        "status": "degraded",
+        "available_bandwidth": 210.0,
+        "connected_devices": 1
+      },
+      {
+        "slice_id": "URLLC-001",
+        "type": "Ultra Reliable Low Latency",
+        "load": 81,
+        "status": "congested",
+        "available_bandwidth": 190.0,
+        "connected_devices": 2
+      },
+      {
+        "slice_id": "MMTC-001",
+        "type": "Massive Machine Type",
+        "load": 60,
+        "status": "active",
+        "available_bandwidth": 400.0,
+        "connected_devices": 2
+      }
+    ],
+    "overall_health": "degraded"
+  }
+}
