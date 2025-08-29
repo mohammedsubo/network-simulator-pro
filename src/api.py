@@ -369,7 +369,6 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
     except Exception:
         manager.disconnect(websocket)
-
 # Health check endpoint
 @app.get("/health")
 async def health_check():
@@ -380,14 +379,11 @@ async def health_check():
         "version": "2.0.0",
         "devices_count": len(simulator.devices)
     }
-# أضف هنا endpoint جديد لـ Render
+
+# Health check endpoint for Render
 @app.get("/healthz", include_in_schema=False)
 async def healthz():
     return {"status": "ok"}
-
-# Info endpoint
-@app.get("/info")
-async def info():
 
 # Info endpoint
 @app.get("/info")
