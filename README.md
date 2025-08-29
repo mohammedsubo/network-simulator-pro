@@ -1,76 +1,87 @@
-﻿# أنشئ README محدث
-@"
-# 5G Network Simulator Pro 🚀
+﻿# 5G Network Simulator Pro 🚀
 
-![Build](https://img.shields.io/badge/build-passing-brightgreen)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://network-simulator-pro.onrender.com)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Python Version](https://img.shields.io/badge/python-3.11-blue)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Python](https://img.shields.io/badge/python-3.10+-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688?logo=fastapi)
+![WebSocket](https://img.shields.io/badge/WebSocket-Enabled-orange)
 
 ## 🔴 Live Demo
+
 **[https://network-simulator-pro.onrender.com](https://network-simulator-pro.onrender.com)**
 
-> Note: Free tier may sleep after inactivity. First load takes ~30 seconds.
+> ⚠️ **Note**: Free hosting tier may take 30-50 seconds to wake up on first visit. Please be patient.
 
 ## 📸 Screenshots
-![Dashboard](api-docs.png)
+
+![Dashboard Preview](api-docs.png)
+
+## 🎯 Overview
+
+A real-time 5G network simulator with interactive dashboard, built to demonstrate network slicing, device management, and performance monitoring capabilities of 5G networks. Features WebSocket-based live updates and comprehensive REST API.
 
 ## ✨ Features
-- Real-time 5G network simulation
-- WebSocket live updates
-- Interactive dashboard
-- REST API with Swagger docs
-- Device management (IoT, Vehicle, Smartphone)
-- Network slices (eMBB, URLLC, mMTC)
-- Metrics export to JSON
 
-## 🏗️ Architecture
-\`\`\`
-Simulator → FastAPI → WebSocket/REST → Dashboard
-           ↓
-        Metrics Export
-\`\`\`
+### Core Functionality
+- **Real-time Network Simulation** - Live metrics updated every 2 seconds
+- **5G Network Slices** - eMBB, URLLC, mMTC support
+- **Device Management** - Add/remove IoT devices, smartphones, and vehicles
+- **Performance Monitoring** - Track latency, throughput, and network load
+- **Data Export** - Export metrics to JSON format
+- **WebSocket Support** - Real-time bidirectional communication
+
+### Technical Features
+- RESTful API with automatic documentation
+- Interactive Swagger/OpenAPI interface
+- Health check endpoints for monitoring
+- CORS enabled for cross-origin requests
+- Responsive Bootstrap 5 dashboard
+- Chart.js for dynamic visualizations
+
+## 🛠️ Tech Stack
+
+### Backend
+- **FastAPI** - Modern Python web framework
+- **Uvicorn** - ASGI server
+- **WebSockets** - Real-time communication
+- **Pydantic** - Data validation
+
+### Frontend
+- **HTML5/CSS3** - Markup and styling
+- **Bootstrap 5** - UI framework
+- **Chart.js** - Data visualization
+- **JavaScript** - Interactive functionality
+
+### Deployment
+- **Render.com** - Cloud hosting
+- **GitHub Actions** - CI/CD
+- **Docker** - Containerization (optional)
 
 ## 🚀 Quick Start
-\`\`\`bash
-# Clone
+
+### Prerequisites
+- Python 3.10+
+- pip package manager
+
+### Local Installation
+
+```bash
+# Clone repository
 git clone https://github.com/mohammedsubo/network-simulator-pro.git
 cd network-simulator-pro
 
-# Install
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Windows: .\venv\Scripts\activate
+
+# Activate virtual environment
+# Windows:
+.\venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Run
+# Run the application
 python src/api.py
-# Open http://localhost:8000
-\`\`\`
-
-## 📚 API Documentation
-- Interactive Docs: `/docs`
-- ReDoc: `/redoc`
-- Health Check: `/health`
-
-## 🛠️ Tech Stack
-- **Backend**: FastAPI, Python 3.10+
-- **Real-time**: WebSocket
-- **Frontend**: HTML5, Chart.js, Bootstrap 5
-- **Deployment**: Render.com
-
-## 📈 Roadmap
-- [ ] PostgreSQL integration
-- [ ] JWT authentication
-- [ ] Docker support
-- [ ] Export to PDF
-- [ ] Mobile app
-
-## 📝 License
-MIT
-
----
-**Made with ❤️ by Mohammed**
-"@ | Set-Content README.md
-
-git add README.md
-git commit -m "Update README with live demo"
-git push origin main
