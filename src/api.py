@@ -1,28 +1,21 @@
 ﻿"""
 Enhanced FastAPI Network Simulator with Dashboard Support
+Version 2.0.0 - Updated with lifespan handler
 """
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+from contextlib import asynccontextmanager
 import asyncio
 import json
 from datetime import datetime
 import uvicorn
 from pathlib import Path
 import random
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="5G Network Simulator API",
-    description="Advanced 5G Network Simulator with Real-time Monitoring",
-    version="2.0.0"
-)
-
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Data Models
 class Device(BaseModel):
@@ -172,7 +165,7 @@ manager = ConnectionManager()
 # Background Tasks
 async def simulate_network():
     """Background task to simulate network activity"""
-    while True:
+    while simulator.is_running:
         if simulator.devices:
             # Update device metrics with some randomness
             for device in simulator.devices.values():
@@ -196,11 +189,11 @@ async def simulate_network():
         
         await asyncio.sleep(2)  # Update every 2 seconds
 
-# API Endpoints
-@app.on_event("startup")
-async def startup_event():
-    """Start background simulation"""
-    asyncio.create_task(simulate_network())
+# Lifespan event handler (replaces on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle"""
+    # Startup
     simulator.is_running = True
     
     # Add some initial devices for demo
@@ -210,11 +203,51 @@ async def startup_event():
         simulator.add_device("iot", "mMTC")
     for _ in range(2):
         simulator.add_device("vehicle", "URLLC")
+    
+    # Start background simulation
+    simulation_task = asyncio.create_task(simulate_network())
+    
+    yield
+    
+    # Shutdown
+    simulator.is_running = False
+    simulation_task.cancel()
+    try:
+        await simulation_task
+    except asyncio.CancelledError:
+        pass
 
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="5G Network Simulator API",
+    description="Advanced 5G Network Simulator with Real-time Monitoring",
+    version="2.0.0",
+    lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify actual origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files if directory exists
+static_path = Path("static")
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# API Endpoints
 @app.get("/")
 async def serve_dashboard():
     """Serve the dashboard HTML"""
-    return FileResponse('templates/dashboard.html')
+    dashboard_path = Path('templates/dashboard.html')
+    if dashboard_path.exists():
+        return FileResponse('templates/dashboard.html')
+    else:
+        return {"message": "Welcome to 5G Network Simulator API", "docs": "/docs"}
 
 @app.get("/api/status")
 async def get_status():
@@ -288,6 +321,13 @@ async def get_devices():
 async def reset_simulation():
     """Reset the entire simulation"""
     simulator.reset()
+    
+    # Add some initial devices after reset
+    for _ in range(3):
+        simulator.add_device("smartphone", "eMBB")
+    for _ in range(2):
+        simulator.add_device("iot", "mMTC")
+    
     return {"message": "Simulation reset successfully"}
 
 @app.post("/api/export")
@@ -295,21 +335,27 @@ async def export_metrics():
     """Export current metrics to JSON file"""
     metrics = simulator.get_metrics()
     
+    export_data = {
+        "exported_at": datetime.now().isoformat(),
+        "metrics": {
+            "network_load": metrics.network_load,
+            "total_devices": metrics.total_devices,
+            "avg_latency": metrics.avg_latency,
+            "throughput": metrics.throughput,
+            "slice_distribution": metrics.slice_distribution
+        },
+        "devices": metrics.devices
+    }
+    
     # Save to file
     with open("metrics_export.json", "w") as f:
-        json.dump({
-            "exported_at": datetime.now().isoformat(),
-            "metrics": {
-                "network_load": metrics.network_load,
-                "total_devices": metrics.total_devices,
-                "avg_latency": metrics.avg_latency,
-                "throughput": metrics.throughput,
-                "slice_distribution": metrics.slice_distribution
-            },
-            "devices": metrics.devices
-        }, f, indent=2)
+        json.dump(export_data, f, indent=2)
     
-    return {"message": "Metrics exported successfully", "filename": "metrics_export.json"}
+    return {
+        "message": "Metrics exported successfully",
+        "filename": "metrics_export.json",
+        "data": export_data
+    }
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -321,12 +367,62 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "2.0.0",
+        "devices_count": len(simulator.devices)
+    }
+
+# Info endpoint
+@app.get("/info")
+async def info():
+    """Get API information"""
+    return {
+        "name": "5G Network Simulator API",
+        "version": "2.0.0",
+        "description": "Advanced 5G Network Simulator with Real-time Monitoring",
+        "endpoints": {
+            "dashboard": "/",
+            "api_docs": "/docs",
+            "api_status": "/api/status",
+            "api_metrics": "/api/metrics",
+            "api_devices": "/api/devices",
+            "websocket": "/ws",
+            "health": "/health"
+        },
+        "features": [
+            "Real-time network simulation",
+            "WebSocket support",
+            "Device management",
+            "Metrics export",
+            "Interactive dashboard"
+        ]
+    }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    import sys
+    
+    # Check for command line arguments
+    host = "0.0.0.0"
+    port = 8000
+    reload = False
+    
+    if len(sys.argv) > 1:
+        port = int(sys.argv[1])
+    
+    # Run the application
+    uvicorn.run(
+        "api:app" if reload else app,
+        host=host,
+        port=port,
+        reload=reload,
+        log_level="info"
+    )
