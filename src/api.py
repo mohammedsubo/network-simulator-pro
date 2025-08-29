@@ -1,11 +1,11 @@
 ﻿"""
 Enhanced FastAPI Network Simulator with Dashboard Support
-Version 2.0.0 - Updated with lifespan handler
+Version 2.1.0 - Production Ready with Monitoring & SEO
 """
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -48,6 +48,7 @@ class SimulatorState:
         self.websocket_clients = []
         self.is_running = False
         self.device_counter = 0
+        self.start_time = datetime.now()
         
     def add_device(self, device_type: str, slice_type: str) -> Device:
         self.device_counter += 1
@@ -133,6 +134,10 @@ class SimulatorState:
             devices=devices_list
         )
     
+    def get_uptime_seconds(self) -> int:
+        """Get uptime in seconds"""
+        return int((datetime.now() - self.start_time).total_seconds())
+    
     def reset(self):
         self.devices.clear()
         self.metrics_history.clear()
@@ -151,7 +156,8 @@ class ConnectionManager:
         self.active_connections.append(websocket)
     
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
     
     async def broadcast(self, message: dict):
         for connection in self.active_connections:
@@ -165,6 +171,7 @@ manager = ConnectionManager()
 # Background Tasks
 async def simulate_network():
     """Background task to simulate network activity"""
+    heartbeat_counter = 0
     while simulator.is_running:
         if simulator.devices:
             # Update device metrics with some randomness
@@ -187,9 +194,18 @@ async def simulate_network():
                 "slice_distribution": metrics.slice_distribution
             })
         
+        # Send heartbeat every 30 seconds
+        heartbeat_counter += 1
+        if heartbeat_counter >= 15:  # 15 * 2 seconds = 30 seconds
+            await manager.broadcast({
+                "type": "heartbeat",
+                "timestamp": datetime.now().isoformat()
+            })
+            heartbeat_counter = 0
+        
         await asyncio.sleep(2)  # Update every 2 seconds
 
-# Lifespan event handler (replaces on_event)
+# Lifespan event handler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
@@ -221,7 +237,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="5G Network Simulator API",
     description="Advanced 5G Network Simulator with Real-time Monitoring",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan
 )
 
@@ -233,6 +249,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security headers middleware
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 # Mount static files if directory exists
 static_path = Path("static")
@@ -249,6 +275,100 @@ async def serve_dashboard():
     else:
         return {"message": "Welcome to 5G Network Simulator API", "docs": "/docs"}
 
+# HEAD support for root endpoint (for uptime monitoring)
+@app.head("/")
+async def head_root():
+    """HEAD endpoint for monitoring services"""
+    return Response(status_code=200)
+
+# Favicon endpoint
+@app.get("/favicon.ico")
+async def favicon():
+    """Serve favicon"""
+    favicon_path = Path('static/favicon.svg')
+    if favicon_path.exists():
+        return FileResponse('static/favicon.svg', media_type='image/svg+xml')
+    # Return a simple SVG if file doesn't exist
+    svg_content = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <text y="80" font-size="80">📡</text></svg>'''
+    return Response(content=svg_content, media_type='image/svg+xml')
+
+# robots.txt for SEO
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots():
+    """Robots.txt for search engines"""
+    return """User-agent: *
+Allow: /
+Allow: /docs
+Allow: /health
+Disallow: /api/
+Disallow: /ws
+Sitemap: https://network-simulator-pro.onrender.com/sitemap.xml"""
+
+# Sitemap for SEO
+@app.get("/sitemap.xml", response_class=PlainTextResponse)
+async def sitemap():
+    """XML Sitemap for search engines"""
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://network-simulator-pro.onrender.com/</loc>
+        <lastmod>{datetime.now().date()}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://network-simulator-pro.onrender.com/docs</loc>
+        <lastmod>{datetime.now().date()}</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+</urlset>"""
+
+# Prometheus metrics endpoint
+@app.get("/metrics", response_class=PlainTextResponse)
+async def prometheus_metrics():
+    """Prometheus-compatible metrics endpoint"""
+    metrics = simulator.get_metrics()
+    uptime = simulator.get_uptime_seconds()
+    
+    return f"""# HELP network_devices_total Total number of connected devices
+# TYPE network_devices_total gauge
+network_devices_total {metrics.total_devices}
+
+# HELP network_load_percent Current network load percentage
+# TYPE network_load_percent gauge
+network_load_percent {metrics.network_load:.2f}
+
+# HELP network_avg_latency_ms Average latency in milliseconds
+# TYPE network_avg_latency_ms gauge
+network_avg_latency_ms {metrics.avg_latency:.2f}
+
+# HELP network_throughput_mbps Total throughput in Mbps
+# TYPE network_throughput_mbps gauge
+network_throughput_mbps {metrics.throughput:.2f}
+
+# HELP slice_devices_embb Devices connected to eMBB slice
+# TYPE slice_devices_embb gauge
+slice_devices_embb {metrics.slice_distribution.get('eMBB', 0)}
+
+# HELP slice_devices_urllc Devices connected to URLLC slice
+# TYPE slice_devices_urllc gauge
+slice_devices_urllc {metrics.slice_distribution.get('URLLC', 0)}
+
+# HELP slice_devices_mmtc Devices connected to mMTC slice
+# TYPE slice_devices_mmtc gauge
+slice_devices_mmtc {metrics.slice_distribution.get('mMTC', 0)}
+
+# HELP api_uptime_seconds API uptime in seconds
+# TYPE api_uptime_seconds counter
+api_uptime_seconds {uptime}
+
+# HELP api_health_status API health status (1=healthy, 0=unhealthy)
+# TYPE api_health_status gauge
+api_health_status 1
+"""
+
 @app.get("/api/status")
 async def get_status():
     """Get current simulator status"""
@@ -260,7 +380,8 @@ async def get_status():
         "avg_latency": round(metrics.avg_latency, 2),
         "throughput": round(metrics.throughput, 2),
         "slice_distribution": metrics.slice_distribution,
-        "devices": metrics.devices
+        "devices": metrics.devices,
+        "uptime_seconds": simulator.get_uptime_seconds()
     }
 
 @app.get("/api/metrics")
@@ -332,30 +453,28 @@ async def reset_simulation():
 
 @app.post("/api/export")
 async def export_metrics():
-    """Export current metrics to JSON file"""
+    """Export current metrics (returns JSON instead of file on free tier)"""
     metrics = simulator.get_metrics()
     
     export_data = {
         "exported_at": datetime.now().isoformat(),
+        "note": "Data export from 5G Network Simulator",
         "metrics": {
-            "network_load": metrics.network_load,
+            "network_load": round(metrics.network_load, 2),
             "total_devices": metrics.total_devices,
-            "avg_latency": metrics.avg_latency,
-            "throughput": metrics.throughput,
+            "avg_latency": round(metrics.avg_latency, 2),
+            "throughput": round(metrics.throughput, 2),
             "slice_distribution": metrics.slice_distribution
         },
-        "devices": metrics.devices
+        "devices": metrics.devices,
+        "uptime_seconds": simulator.get_uptime_seconds()
     }
     
-    # Save to file
-    with open("metrics_export.json", "w") as f:
-        json.dump(export_data, f, indent=2)
-    
-    return {
-        "message": "Metrics exported successfully",
-        "filename": "metrics_export.json",
-        "data": export_data
-    }
+    # Return JSON directly (file system is ephemeral on Render free tier)
+    return JSONResponse(
+        content=export_data,
+        headers={"Content-Disposition": "attachment; filename=metrics_export.json"}
+    )
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -363,26 +482,32 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Keep connection alive
-            await websocket.receive_text()
+            # Receive and echo back (keep-alive)
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception:
         manager.disconnect(websocket)
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Detailed health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "version": "2.0.0",
-        "devices_count": len(simulator.devices)
+        "version": "2.1.0",
+        "devices_count": len(simulator.devices),
+        "uptime_seconds": simulator.get_uptime_seconds(),
+        "websocket_connections": len(manager.active_connections)
     }
 
-# Health check endpoint for Render
+# Simple health check for Render
 @app.get("/healthz", include_in_schema=False)
 async def healthz():
+    """Simple health check for monitoring services"""
     return {"status": "ok"}
 
 # Info endpoint
@@ -391,24 +516,30 @@ async def info():
     """Get API information"""
     return {
         "name": "5G Network Simulator API",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "description": "Advanced 5G Network Simulator with Real-time Monitoring",
         "endpoints": {
             "dashboard": "/",
             "api_docs": "/docs",
+            "redoc": "/redoc",
             "api_status": "/api/status",
             "api_metrics": "/api/metrics",
             "api_devices": "/api/devices",
             "websocket": "/ws",
-            "health": "/health"
+            "health": "/health",
+            "prometheus_metrics": "/metrics"
         },
         "features": [
             "Real-time network simulation",
-            "WebSocket support",
-            "Device management",
-            "Metrics export",
-            "Interactive dashboard"
-        ]
+            "WebSocket support with heartbeat",
+            "Device management (IoT, Vehicle, Smartphone)",
+            "Network slicing (eMBB, URLLC, mMTC)",
+            "Prometheus metrics export",
+            "SEO optimized",
+            "Security headers"
+        ],
+        "github": "https://github.com/mohammedsubo/network-simulator-pro",
+        "live_demo": "https://network-simulator-pro.onrender.com"
     }
 
 if __name__ == "__main__":
